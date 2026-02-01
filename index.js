@@ -9,18 +9,15 @@ const port = process.env.PORT || 3000;
 // middleware
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "https://curious-palmier-ba6203.netlify.app",
-    ],
+    origin: ["http://localhost:5173", "http://localhost:5176"],
     credentials: true,
   })
 );
+
 app.use(express.json());
 
-// MongoDB URI (USING YOUR CREDENTIALS)
-const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.udjsjsk.mongodb.net/?appName=Cluster0`;
+// ✅ Mongo URI from .env (one line solution)
+const uri = process.env.MONGO_URI;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -32,8 +29,8 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // optional connect
-    // await client.connect();
+    await client.connect();
+    console.log("MongoDB Connected!");
 
     const db = client.db("plateShareDB");
     const foodCollection = db.collection("foods");
@@ -47,11 +44,10 @@ async function run() {
       res.send(result);
     });
 
-    // Get all foods
+    // Get all foods (with status filter)
     app.get("/foods", async (req, res) => {
       const status = req.query.status;
-      let query = {};
-      if (status) query.food_status = status;
+      const query = status ? { food_status: status } : {};
       const foods = await foodCollection.find(query).toArray();
       res.send(foods);
     });
@@ -84,8 +80,6 @@ async function run() {
     // My foods
     app.get("/my-foods", async (req, res) => {
       const email = req.query.email;
-      if (!email) return res.status(400).send({ message: "Email required" });
-
       const foods = await foodCollection
         .find({ donator_email: email })
         .toArray();
@@ -117,9 +111,8 @@ async function run() {
       res.send(result);
     });
 
-    console.log("MongoDB connected & APIs ready!");
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error(err);
   }
 }
 
@@ -130,7 +123,6 @@ app.get("/", (req, res) => {
   res.send("PlateShare API running");
 });
 
-// Server start
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
