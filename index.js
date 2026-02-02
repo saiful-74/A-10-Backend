@@ -13,10 +13,9 @@ app.use(
     credentials: true,
   })
 );
-
 app.use(express.json());
 
-// ✅ Mongo URI from .env (one line solution)
+// Mongo URI
 const uri = process.env.MONGO_URI;
 
 const client = new MongoClient(uri, {
@@ -33,8 +32,13 @@ async function run() {
     console.log("MongoDB Connected!");
 
     const db = client.db("plateShareDB");
+
+    // Collections
     const foodCollection = db.collection("foods");
-    const foodRequestsCollection = db.collection("foodRequests");
+    const foodRequestsCollection = db.collection("foodRequests"); // পুরোনো (থাকতে পারে)
+    const requestsCollection = db.collection("requests"); // ✅ NEW request system
+
+    // ---------------- FOOD APIs ----------------
 
     // Add food
     app.post("/add-food", async (req, res) => {
@@ -44,7 +48,7 @@ async function run() {
       res.send(result);
     });
 
-    // Get all foods (with status filter)
+    // Get all foods
     app.get("/foods", async (req, res) => {
       const status = req.query.status;
       const query = status ? { food_status: status } : {};
@@ -86,7 +90,9 @@ async function run() {
       res.send(foods);
     });
 
-    // Food request
+    // ---------------- OLD FOOD REQUEST APIs (optional) ----------------
+    // (এগুলো তুমি চাইলে পরে delete করতে পারো)
+
     app.post("/food-requests", async (req, res) => {
       const request = req.body;
       request.status = "pending";
@@ -94,7 +100,6 @@ async function run() {
       res.send(result);
     });
 
-    // Requests by food
     app.get("/food-requests/:foodId", async (req, res) => {
       const requests = await foodRequestsCollection
         .find({ foodId: req.params.foodId })
@@ -102,7 +107,6 @@ async function run() {
       res.send(requests);
     });
 
-    // Update request status
     app.put("/food-requests/:id", async (req, res) => {
       const result = await foodRequestsCollection.updateOne(
         { _id: new ObjectId(req.params.id) },
@@ -111,12 +115,71 @@ async function run() {
       res.send(result);
     });
 
+    // ---------------- ✅ NEW REQUEST SYSTEM ----------------
+
+    // 📩 POST /requests (request submit)
+    app.post("/requests", async (req, res) => {
+      try {
+        const requestData = req.body;
+        requestData.status = "pending";
+        requestData.createdAt = new Date();
+
+        const result = await requestsCollection.insertOne(requestData);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ error: err.message });
+      }
+    });
+
+    // 📋 GET /requests/food/:foodId (specific food requests)
+    app.get("/requests/food/:foodId", async (req, res) => {
+      try {
+        const { foodId } = req.params;
+        const result = await requestsCollection.find({ foodId }).toArray();
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ error: err.message });
+      }
+    });
+
+    // ✅ PATCH /requests/:id (accept / reject)
+    app.patch("/requests/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const result = await requestsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status } }
+        );
+
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ error: err.message });
+      }
+    });
+
+    // 🍽 PATCH /foods/status/:id (food status -> donated)
+    app.patch("/foods/status/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const result = await foodCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { food_status: "donated" } }
+        );
+
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ error: err.message });
+      }
+    });
   } catch (err) {
     console.error(err);
   }
 }
 
-run();
+run().catch(console.dir);
 
 // Root
 app.get("/", (req, res) => {
