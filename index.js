@@ -7,12 +7,19 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // middleware
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  "http://localhost:5173",
+  "http://localhost:5176",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5176"],
+    origin: allowedOrigins,
     credentials: true,
   })
 );
+
 app.use(express.json());
 
 // Mongo URI
