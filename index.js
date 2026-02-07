@@ -6,8 +6,6 @@ require("dotenv").config();
 const app = express();
 
 // ---------------- Middleware ----------------
-const cors = require("cors");
-
 app.use(
   cors({
     origin: [
@@ -18,7 +16,6 @@ app.use(
     credentials: true,
   })
 );
-
 
 app.use(express.json());
 
@@ -47,7 +44,7 @@ async function connectDB() {
 }
 
 // ---------------- Root ----------------
-app.get("/", async (req, res) => {
+app.get("/", (req, res) => {
   res.send("PlateShare API running");
 });
 
@@ -132,8 +129,9 @@ app.get("/requests", async (req, res) => {
   try {
     await connectDB();
     const email = req.query.email;
-    if (!email)
+    if (!email) {
       return res.status(400).send({ error: "email query is required" });
+    }
 
     const result = await requestsCollection
       .find({ requesterEmail: email })
@@ -179,5 +177,5 @@ app.patch("/foods/status/:id", async (req, res) => {
   }
 });
 
-// ❌ app.listen থাকবে না
+// ❌ app.listen থাকবে না (Vercel handle করবে)
 module.exports = app;
