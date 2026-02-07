@@ -6,18 +6,19 @@ require("dotenv").config();
 const app = express();
 
 // ---------------- Middleware ----------------
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  "http://localhost:5173",
-  "http://localhost:5176",
-].filter(Boolean);
+const cors = require("cors");
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5176",
+      "https://heartfelt-biscuit-b915e9.netlify.app",
+    ],
     credentials: true,
   })
 );
+
 
 app.use(express.json());
 
