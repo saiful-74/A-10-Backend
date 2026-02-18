@@ -6,13 +6,21 @@ require("dotenv").config();
 const app = express();
 
 // ---------------- Middleware ----------------
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5176",
+  // তোমার frontend vercel URL চাইলে এখানে hardcode করো:
+  // "https://your-frontend.vercel.app",
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5176",
-      "https://heartfelt-biscuit-b915e9.netlify.app",
-    ],
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true); // Allow server-to-server requests
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (origin.endsWith(".vercel.app")) return callback(null, true); // ✅ Any Vercel frontend allowed
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
@@ -52,7 +60,7 @@ app.get("/", (req, res) => {
 app.post("/add-food", async (req, res) => {
   await connectDB();
   const food = req.body;
-  food.food_status = "Available";
+  food.food_status = "available"; // ✅ changed to lowercase
   const result = await foodCollection.insertOne(food);
   res.send(result);
 });
